@@ -1,0 +1,40 @@
+﻿@inherits LayoutComponentBase
+
+<MudLayout>
+    <MudHidden Breakpoint="Breakpoint.SmAndDown" Invert="true">
+        <MudAppBar Elevation="1" Dense="true">
+            <MudFab Icon="@Icons.Material.Filled.Menu" Size="Size.Small" IconSize="Size.Small" OnClick="@ToggleDrawer" Class="mt-auto mb-auto"
+                    Style="background-color: white;" />
+            <MudAppBarSpacer />
+            <MudText Typo="Typo.h6">PruCinema</MudText>
+            <MudAppBarSpacer />
+        </MudAppBar>
+        <MudDrawer @bind-Open="@open" ClipMode="DrawerClipMode.Always" PreserveOpenState="false"
+                   Elevation="3" Variant="DrawerVariant.Responsive" OpenMiniOnHover="false">
+            <NavMenu />
+        </MudDrawer>
+    </MudHidden>
+
+    <MudHidden Breakpoint="Breakpoint.MdAndUp" Invert="true">
+        <MudDrawer @bind-Open="@open" ClipMode="DrawerClipMode.Never" PreserveOpenState="false"
+                   Elevation="5" Variant="DrawerVariant.Mini" OpenMiniOnHover="true" Fixed="true">
+            <MudDrawerHeader Class="d-flex justify-center">
+                <MudIcon Color="Color.Info" Icon="@Icons.Material.Filled.MovieFilter" Style="font-size: 4em;"></MudIcon>
+            </MudDrawerHeader>
+            <NavMenu />
+        </MudDrawer>
+    </MudHidden>
+
+    <MudMainContent Class="px-5 pb-5 pt-md-5 pb-md-10 px-md-10">
+        @Body
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private bool open = false;
+
+    private void ToggleDrawer()
+    {
+        open = !open;
+    }
+}

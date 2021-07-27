@@ -1,0 +1,174 @@
+﻿@page "/peliculas"
+@using System.Net
+@*@attribute [Authorize(Roles = "admin")]*@
+
+@inject ISnackbar snackbar
+@inject IDialogService dialogService
+@inject IRepositoryService repositoryService
+@inject NavigationManager navigationManager
+
+<MudText Typo="Typo.h5"><b>Películas</b></MudText>
+<MudText Typo="Typo.subtitle1">Cree y administre las películas de su cinema.</MudText>
+
+<MudTable Items="@Peliculas" Breakpoint="Breakpoint.MdAndDown" Dense="true" Hover="true" Class="mt-3"
+          Filter="new Func<PeliculaResponse, bool>(FilterFunc)" Loading="@isLoading" Elevation="0">
+    <ToolBarContent>
+        <MudGrid Spacing="0" Class="d-flex justify-space-between pb-5">
+            <MudItem xs="7" md="4" lg="4">
+                <MudTextField @bind-Value="searchString" Variant="Variant.Outlined" Placeholder="Buscar Película" Clearable="true"
+                              Adornment="Adornment.End" AdornmentColor="Color.Primary" AdornmentIcon="@Icons.Material.Filled.Search"
+                              IconSize="Size.Medium" Margin="Margin.Dense" />
+            </MudItem>
+            <MudItem xs="5" md="3" lg="2" Class="d-flex justify-end">
+                <MudButton Variant="Variant.Filled" Color="Color.Info" StartIcon="@Icons.Material.Filled.AddCircle" OnClick="OnAddPelicula">Agregar Película</MudButton>
+            </MudItem>
+        </MudGrid>
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTh><MudTableSortLabel SortBy="new Func<PeliculaResponse, object>(x => x.Codigo)">Código</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<PeliculaResponse, object>(x => x.Nombre)">Nombre</MudTableSortLabel></MudTh>
+        <MudTh Class="text-center">Estado</MudTh>
+        <MudTh Class="text-center">Acciones</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.Codigo</MudTd>
+        <MudTd>@context.Nombre</MudTd>
+        <MudTd Class="text-center">
+            <MudSwitch T="bool" Checked=@(context.Estado == "ACT") CheckedChanged="@(args => OnDeletePelicula(context.IdPelicula))" Color="Color.Info" />
+        </MudTd>
+        <MudTd Class="text-center">
+            <MudMenu Icon="@Icons.Material.Filled.MoreHoriz" Size="Size.Medium" OffsetX="false" OffsetY="true" Dense="true"
+                     Direction="Direction.Right" DisableRipple="true">
+                <MudMenuItem OnClick="@(args => OnViewPelicula(context.IdPelicula))">Ver</MudMenuItem>
+                <MudMenuItem OnClick="@(args => OnEditPelicula(context.IdPelicula))">Editar</MudMenuItem>
+                @*<MudMenuItem OnClick="@(args => OnDeletePelicula(context.IdPelicula))">Eliminar</MudMenuItem>*@
+            </MudMenu>
+        </MudTd>
+    </RowTemplate>
+    <PagerContent>
+        <MudTablePager InfoFormat="{first_item}-{last_item} de {all_items}" DisableRowsPerPage="true" PageSizeOptions="new int[] { 20, 100 }" />
+    </PagerContent>
+</MudTable>
+
+@code {
+    private IEnumerable<PeliculaResponse> Peliculas { get; set; } = new List<PeliculaResponse>();
+    private string searchString = string.Empty;
+    private bool isLoading = true;
+
+    #region Eventos Page
+
+    protected override async Task OnInitializedAsync()
+    {
+        await UpdateGrid();
+    }
+
+    private async Task UpdateGrid()
+    {
+        isLoading = true;
+        Peliculas = await repositoryService.Get<IEnumerable<PeliculaResponse>>("api/peliculas/0/null");
+        isLoading = false;
+    }
+
+    private bool FilterFunc(PeliculaResponse element)
+    {
+        if (string.IsNullOrWhiteSpace(searchString)) return true;
+        if (element.Nombre.Contains(searchString, StringComparison.OrdinalIgnoreCase)) return true;
+
+        return false;
+    }
+
+    #endregion
+
+
+    #region Eventos Grid
+
+    private async Task OnAddPelicula()
+    {
+        await ShowPeliculaModal(0, "ADD");
+    }
+
+    private async Task OnEditPelicula(long idPelicula)
+    {
+        await ShowPeliculaModal(idPelicula, "EDIT");
+    }
+
+    private async Task OnViewPelicula(long idPelicula)
+    {
+        await ShowPeliculaModal(idPelicula, "VIEW");
+    }
+
+    private async Task OnDeletePelicula(long idPelicula)
+    {
+        var parameters = new DialogParameters()
+        {
+                { nameof(MessageBox.Style), MessageBox.DialogStyle.Question },
+                { nameof(MessageBox.Title), "Eliminar Película" },
+                { nameof(MessageBox.Subtitle1), "¿Confirma la eliminación del registro seleccionado?" },
+                { nameof(MessageBox.Subtitle2), null },
+                { nameof(MessageBox.YesText), "Si" },
+                { nameof(MessageBox.NoText), "No" },
+                { nameof(MessageBox.CancelText), null },
+            };
+
+        var options = new DialogOptions
+        {
+            CloseButton = false,
+            MaxWidth = MaxWidth.Small,
+            DisableBackdropClick = true
+        };
+
+        var dialog = dialogService.Show<MessageBox>("Iniciando...", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Cancelled)
+        {
+            if ((bool)(result.Data ?? false))
+            {
+                var httpResponse = await repositoryService.Del($"api/peliculas/{idPelicula}");
+
+                if (httpResponse.StatusCode == HttpStatusCode.OK) // Éxito
+                {
+                    snackbar.Add("Estado actualizado.", Severity.Success);
+                    await UpdateGrid();
+                }
+                else // Error
+                {
+                    snackbar.Add($"Error: {httpResponse.RequestMessage.ToString()}", Severity.Error);
+                }
+            }
+        }
+    }
+
+    #endregion
+
+
+    #region Eventos Form
+
+    private async Task ShowPeliculaModal(long idPelicula, string accion)
+    {
+        var parameters = new DialogParameters()
+        {
+            { nameof(SetPeliculaModal.IdPelicula), idPelicula},
+            { nameof(SetPeliculaModal.Accion), accion }
+        };
+
+        var options = new DialogOptions
+        {
+            CloseButton = true,
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true,
+            DisableBackdropClick = true
+        };
+
+        var dialog = dialogService.Show<SetPeliculaModal>("Cargando...", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Cancelled)
+        {
+            await UpdateGrid();
+        }
+    }
+
+    #endregion
+
+}

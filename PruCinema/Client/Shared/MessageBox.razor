@@ -1,0 +1,109 @@
+﻿<MudDialog ClassActions="mt-1 mb-3 mr-4">
+    <TitleContent>
+        <MudText Typo="Typo.h5" Class="d-flex justify-center"><b>@Title</b></MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid Justify="Justify.Center">
+            <MudItem xs="12" Class="d-flex justify-center">
+                @if (Style == DialogStyle.Confirm)
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Class="fs-8x" />
+                }
+                @if (Style == DialogStyle.Error)
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Cancel" Color="Color.Error" Class="fs-8x" />
+                }
+                @if (Style == DialogStyle.Info)
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Info" Class="fs-8x" />
+                }
+                @if (Style == DialogStyle.Question)
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Help" Color="Color.Info" Class="fs-8x" />
+                }
+                @if (Style == DialogStyle.Warning)
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Warning" Class="fs-8x" />
+                }
+            </MudItem>
+            <MudItem xs="12" Class="d-flex justify-center">
+                <MudText Typo="Typo.subtitle1"><b>@Subtitle1</b></MudText>
+
+            </MudItem>
+            <MudItem xs="12" Class="d-flex justify-center">
+                @if (string.IsNullOrEmpty(@CancelText))
+                {
+                    <MudText Typo="Typo.subtitle2" Class="d-flex justify-center">@Subtitle2</MudText>
+                }
+            </MudItem>
+        </MudGrid>
+
+        @if (!MudDialog.Options.CloseButton ?? false)
+        {
+            <MudDivider DividerType="DividerType.FullWidth" Class="mt-4" />
+        }
+    </DialogContent>
+    <DialogActions>
+        @if (!MudDialog.Options.CloseButton ?? false)
+        {
+            @if (!string.IsNullOrEmpty(@CancelText))
+            {
+                <MudButton Variant="Variant.Outlined" Size="Size.Medium" Class="px-10" Color="Color.Default" OnClick="@OnCancel">
+                    @CancelText
+                </MudButton>
+            }
+
+            @if (!string.IsNullOrEmpty(NoText))
+            {
+                <MudButton Variant="Variant.Outlined" Size="Size.Medium" Class="px-10" Color="Color.Info" DisableElevation="true" OnClick="@OnNot">
+                    @NoText
+                </MudButton>
+            }
+
+            @if (!string.IsNullOrEmpty(YesText))
+            {
+                <MudButton Variant="Variant.Filled" Size="Size.Medium" Class="px-10" Color="Color.Success" DisableElevation="true" OnClick="@OnYes">
+                    @YesText
+                </MudButton>
+            }
+        }
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public DialogStyle Style { get; set; }
+
+    [Parameter] public string Title { get; set; }
+    [Parameter] public string Subtitle1 { get; set; }
+    [Parameter] public string Subtitle2 { get; set; }
+
+    [Parameter] public string YesText { get; set; }
+    [Parameter] public string NoText { get; set; }
+    [Parameter] public string CancelText { get; set; }
+
+    private void OnCancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private void OnYes()
+    {
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void OnNot()
+    {
+        MudDialog.Close(DialogResult.Ok(false));
+    }
+
+    public enum DialogStyle
+    {
+        Error,
+        Question,
+        Warning,
+        Info,
+        Confirm
+    }
+}

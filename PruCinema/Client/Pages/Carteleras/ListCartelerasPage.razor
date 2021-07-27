@@ -1,0 +1,115 @@
+﻿@page "/carteleras"
+@using System.Net
+@*@attribute [Authorize(Roles = "admin")]*@
+
+@inject ISnackbar snackbar
+@inject IDialogService dialogService
+@inject IRepositoryService repositoryService
+@inject NavigationManager navigationManager
+
+<MudText Typo="Typo.h5"><b>Películas</b></MudText>
+<MudText Typo="Typo.subtitle1">Cree y administre las películas de su cinema.</MudText>
+
+<MudTable Items="@Peliculas" Breakpoint="Breakpoint.MdAndDown" Dense="true" Hover="true" Class="mt-3"
+          Filter="new Func<PeliculaResponse, bool>(FilterFunc)" Loading="@isLoading" Elevation="0">
+    <ToolBarContent>
+        <MudGrid Spacing="0" Class="d-flex justify-space-between pb-5">
+            <MudItem xs="7" md="4" lg="4">
+                <MudTextField @bind-Value="searchString" Variant="Variant.Outlined" Placeholder="Buscar Película" Clearable="true"
+                              Adornment="Adornment.End" AdornmentColor="Color.Primary" AdornmentIcon="@Icons.Material.Filled.Search"
+                              IconSize="Size.Medium" Margin="Margin.Dense" />
+            </MudItem>
+        </MudGrid>
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTh><MudTableSortLabel SortBy="new Func<PeliculaResponse, object>(x => x.Codigo)">Código</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<PeliculaResponse, object>(x => x.Nombre)">Nombre</MudTableSortLabel></MudTh>
+        <MudTh>Carteleras</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.Codigo</MudTd>
+        <MudTd>@context.Nombre</MudTd>
+        <MudTd Class="py-3">
+            <MudBadge Content="@context.Carteleras.ToString()" Color="Color.Error" Overlap="true" Bottom="true">
+                <MudIconButton Size="Size.Large" DisableRipple="true" DisableElevation="true" Icon="@Icons.Material.Filled.FactCheck" Color="Color.Info"
+                               OnClick="@(args => OnAddCarteleraPelicula(context.IdPelicula))" Class="py-0">
+                </MudIconButton>
+            </MudBadge>
+        </MudTd>
+    </RowTemplate>
+    <PagerContent>
+        <MudTablePager InfoFormat="{first_item}-{last_item} de {all_items}" DisableRowsPerPage="true" PageSizeOptions="new int[] { 20, 100 }" />
+    </PagerContent>
+</MudTable>
+
+@code {
+    private IEnumerable<PeliculaResponse> Peliculas { get; set; } = new List<PeliculaResponse>();
+    private string searchString = string.Empty;
+    private bool isLoading = true;
+
+    #region Eventos Page
+
+    protected override async Task OnInitializedAsync()
+    {
+        await UpdateGrid();
+    }
+
+    private async Task UpdateGrid()
+    {
+        isLoading = true;
+        Peliculas = await repositoryService.Get<IEnumerable<PeliculaResponse>>("api/peliculas/0/ACT");
+        isLoading = false;
+    }
+
+    private bool FilterFunc(PeliculaResponse element)
+    {
+        if (string.IsNullOrWhiteSpace(searchString)) return true;
+        if (element.Nombre.Contains(searchString, StringComparison.OrdinalIgnoreCase)) return true;
+
+        return false;
+    }
+
+    #endregion
+
+
+    #region Eventos Grid
+
+
+    private async Task OnAddCarteleraPelicula(long idPelicula)
+    {
+        await ShowCarteleraModal(idPelicula);
+    }
+
+
+    #endregion
+
+
+    #region Eventos Form
+
+    private async Task ShowCarteleraModal(long idPelicula)
+    {
+        var parameters = new DialogParameters()
+    {
+            { nameof(SetCarteleraModal.IdPelicula), idPelicula},
+        };
+
+        var options = new DialogOptions
+        {
+            CloseButton = true,
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true,
+            DisableBackdropClick = true
+        };
+
+        var dialog = dialogService.Show<SetCarteleraModal>("Cargando...", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Cancelled)
+        {
+            await UpdateGrid();
+        }
+    }
+
+    #endregion
+
+}

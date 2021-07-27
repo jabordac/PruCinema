@@ -1,0 +1,174 @@
+﻿@using System.Net
+@inject ISnackbar snackbar
+@inject IRepositoryService repositoryService
+
+@if (Pelicula != null)
+{
+    <EditForm Model="@Pelicula" OnValidSubmit="OnValidSubmit">
+        <DataAnnotationsValidator />
+        <MudDialog ClassActions="mt-1 mb-3 mr-4">
+            <TitleContent>
+                <MudText Typo="Typo.h5" Class="d-flex justify-center"><b>@titulo</b></MudText>
+                <MudText Typo="Typo.subtitle1" Class="d-flex justify-center">@subtitulo</MudText>
+            </TitleContent>
+            <DialogContent>
+                <MudGrid Spacing="3">
+                    <MudItem xs="12" sm="12" md="2">
+                        <MudGrid>
+                            <MudItem xs="12">
+                                <MudPaper MaxHeight="200px" Style="align-content: center">
+                                    <img width="100%" src=@($"img/Caratulas/{Pelicula.Imagen}.jpg") />
+                                </MudPaper>
+                            </MudItem>
+                            <MudItem xs="12" Style="display:flex; justify-content: center">
+                                <MudButton Variant="Variant.Filled" Color="Color.Success" DisableElevation="true" Disabled="@isDisabled">Cargar imagen</MudButton>
+                            </MudItem>
+                        </MudGrid>
+                    </MudItem>
+                    <MudItem xs="12" sm="12" md="10">
+                        <MudFocusTrap DefaultFocus="DefaultFocus.FirstChild">
+                            <MudGrid Spacing="2">
+                                <MudItem xs="12" sm="12" md="3">
+                                        <MudTextField Label="Código" @bind-Value="Pelicula.Codigo" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@isDisabled"/>
+                                    <ValidationMessage For="@(() => Pelicula.Codigo)"/>
+                                </MudItem>
+
+                                <MudItem xs="12" sm="12" md="9">
+                                    <MudTextField Label="Nombre" @bind-Value="Pelicula.Nombre" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@isDisabled"/>
+                                    <ValidationMessage For="@(() => Pelicula.Nombre)" />
+                                </MudItem>
+
+                                <MudItem xs="12" sm="12" md="12">
+                                    <MudTextField Label="Descripción" @bind-Value="Pelicula.Descripcion" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                                  Lines="8" Disabled="@isDisabled"/>
+                                    <ValidationMessage For="@(() => Pelicula.Descripcion)" />
+                                </MudItem>
+
+                                @*<MudItem xs="12" sm="12" md="12">
+                                    <MudTextField Label="Horarios" @bind-Value="Pelicula.Horarios" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                                  Lines="4"/>
+                                    <ValidationMessage For="@(() => Pelicula.Horarios)" />
+                                </MudItem>*@
+                            </MudGrid>
+                        </MudFocusTrap>
+                    </MudItem>
+                </MudGrid>
+
+                <MudDivider DividerType="DividerType.FullWidth" Class="mt-6" />
+            </DialogContent>
+            <DialogActions>
+                @if (!isDisabled)
+                {
+                    <MudButton Variant="Variant.Outlined" Color="Color.Default" ButtonType="ButtonType.Button" OnClick="OnCancel" Disabled="@(isLoading)">
+                        Cancelar
+                    </MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Success" ButtonType="ButtonType.Submit" DisableElevation="true" Disabled="@(isLoading)">
+                        Guardar
+                    </MudButton>
+                }
+            </DialogActions>
+        </MudDialog>
+    </EditForm>
+}
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    [Parameter] public long IdPelicula { get; set; }
+    [Parameter] public string Accion { get; set; }
+
+    #region Propiedades
+
+    private PeliculaRequest Pelicula { get; set; }
+
+    private string titulo;
+    private string subtitulo;
+    private bool isLoading = true;
+    private bool isDisabled = false;
+
+    #endregion
+
+
+    #region Eventos
+
+    protected override async Task OnInitializedAsync()
+    {
+        titulo = Accion switch
+        {
+            "ADD" => "Nueva Película",
+            "EDIT" => "Modificar Película",
+            "VIEW" => "Consultar Película",
+            _ => titulo
+        };
+
+        subtitulo = Accion switch
+        {
+            "ADD" => "Para crear una Película debes completar los campos.",
+            "EDIT" => "Para modificar una Película debes actualizar los campos requeridos.",
+            _ => subtitulo
+        };
+
+        if (Accion == "ADD")
+        {
+            Pelicula = new PeliculaRequest();
+        }
+        else
+        {
+            Pelicula = await ObtenerPelicula();
+        }
+
+        isDisabled = (Accion == "VIEW");
+
+        isLoading = false;
+    }
+
+    private async Task OnValidSubmit()
+    {
+        isLoading = true;
+
+        var httpResponse = await repositoryService.Set(Accion, "api/peliculas", Pelicula);
+
+        if (httpResponse.StatusCode == HttpStatusCode.OK) // Éxito
+        {
+            MudDialog.Close(DialogResult.Ok(true));
+            snackbar.Add("Registro actualizado.", Severity.Success);
+        }
+        else // Error
+        {
+            snackbar.Add($"Error: {httpResponse.RequestMessage.ToString()}", Severity.Error);
+        }
+
+        isLoading = false;
+    }
+
+    private void OnCancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private void OnLoaded()
+    {
+        isLoading = false;
+    }
+
+    #endregion
+
+    #region Métodos para Obtener Datos
+
+    private async Task<PeliculaRequest> ObtenerPelicula()
+    {
+        PeliculaResponse peliculaResponse = (await repositoryService.Get<IEnumerable<PeliculaResponse>>($"api/peliculas/{IdPelicula}/null")).LastOrDefault();
+
+        PeliculaRequest peliculaRequest = new PeliculaRequest
+        {
+            IdPelicula = peliculaResponse.IdPelicula,
+            Codigo = peliculaResponse.Codigo,
+            Nombre = peliculaResponse.Nombre,
+            Descripcion = peliculaResponse.Descripcion,
+            Imagen = peliculaResponse.Imagen,
+        };
+
+        return peliculaRequest;
+    }
+
+    #endregion
+}

@@ -1,0 +1,40 @@
+﻿
+@inject ISnackbar snackbar
+@inject IDialogService dialogService
+
+<style>
+    .mud-table-container {
+        overflow: auto;
+    }
+</style>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    [Parameter] public long IdPelicula { get; set; }
+
+    #region Propiedades
+
+    //private List<CartelerasResponseDto> PeliculaCarteleras { get; set; } = new List<CartelerasResponseDto>();
+
+    private string searchString = string.Empty;
+    private string titulo;
+    private bool isLoading = false;
+
+    #endregion
+
+
+    #region Eventos
+
+    protected override async Task OnInitializedAsync()
+    {
+        await UpdateGrid();
+    }
+
+    private async Task UpdateGrid()
+    {
+    }
+
+    #endregion
+
+    
+}
