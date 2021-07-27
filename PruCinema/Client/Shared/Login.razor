@@ -1,39 +1,110 @@
 ﻿@page "/login"
 
+@layout LoginLayout
 @inject HttpClient Client
 @inject CustomAuthenticationStateProvider Auth
 
-<h3>Login</h3>
+@attribute [AllowAnonymous]
 
-<div>
-    <label>Usuario</label>
-    <input type="text" @bind="user" />
-</div>
+@using System.Security.Claims;
 
-<div>
-    <label>Contraseña</label>
-    <input type="text" @bind="pass" />
-</div>
+<MudGrid Class="d-flex justify-center align-content-center" Style="height: 100vh">
+    <MudItem xs="10" md="6" lg="4">
+        <MudPaper Elevation="12" Class="py-16 px-15" Style="height: 75vh">
+            <EditForm Model="@LoginData" OnValidSubmit="@OnValidSubmit">
+                <DataAnnotationsValidator />
+                <MudGrid Justify="Justify.Center" Spacing="3">
+                    <MudItem xs="12" Class="d-flex justify-center">
+                        <img src="img/LogoCinema.png" alt="Logo Cinema" />
+                    </MudItem>
+                    <MudItem xs="12" Class="d-flex justify-center py-8">
+                        <MudText Typo="Typo.h4" Style="font-weight: 500;">BIENVENIDO</MudText>
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField Label="Nombre de Usuario" @bind-Value="LoginData.Nombre" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                        <ValidationMessage For="@(() => LoginData.Nombre)" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField Label="Contraseña" @bind-Value="LoginData.Password" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                      InputType="InputType.Password" />
+                        <ValidationMessage For="@(() => LoginData.Password)" />
+                    </MudItem>
+                    <MudItem xs="4">
 
-<div>
-    <button @onclick="(()=>loginuser())">Enviar</button>
-</div>
+                    </MudItem>
+                    <MudItem xs="8">
+                        <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Large" FullWidth="true" ButtonType="ButtonType.Submit" DisableElevation="true">
+                            Ingresar
+                        </MudButton>
+                    </MudItem>
+                </MudGrid>
+            </EditForm>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
 
-@code { string user = "";
-    string pass = "";
 
-    async Task loginuser()
+@code { 
+    LoginRequest LoginData { get; set; } = new();
+
+    private async Task OnValidSubmit()
     {
-        var response = await Client.GetAsync($"api/auth/login?user={user}&pass={pass}");
+        //var response = await Client.GetAsync($"api/auth/login?user={LoginData.Nombre}&pass={LoginData.Password}");
 
-        if (response.IsSuccessStatusCode)
+        //if (response.IsSuccessStatusCode)
+        //{
+        //    var token = await response.Content.ReadAsStringAsync();
+        //    Console.WriteLine(token);
+        //    await Auth.SetTokenAsync(token, DateTime.Now.AddSeconds(30).ToString());
+        //    var data = await Auth.GetAuthenticationStateAsync();
+        //    Console.WriteLine(data.User.Identity);
+        //    Console.WriteLine(data.User.Claims.ToList().Count);
+        //    StateHasChanged();
+        //}
+    }
+}
+
+
+@*@code {
+    
+
+    protected override async Task OnInitializedAsync()
+    {
+
+    }
+
+    private async Task OnValidSubmit()
+    {
+        LoginRequestDto loginRequest = new LoginRequestDto
         {
-            var token = await response.Content.ReadAsStringAsync();
-            Console.WriteLine(token);
-            await Auth.SetTokenAsync(token, DateTime.Now.AddSeconds(30).ToString());
-            var data = await Auth.GetAuthenticationStateAsync();
-            Console.WriteLine(data.User.Identity);
-            Console.WriteLine(data.User.Claims.ToList().Count);
-            StateHasChanged();
+            Accion = "Login",
+            Login = Login.Login,
+            Clave = Utilities.CalculateSHA256Hash(Login.Clave)
+        };
+
+        LoginResponseDto loginResponse = await interceptorService.GetLogin(loginRequest);
+
+        if (loginResponse.State)
+        {
+            Claim[] claims = null;
+
+            claims = new[]
+            {
+                new Claim(ClaimTypes.NameIdentifier, loginResponse.Login),
+                new Claim(ClaimTypes.Name, loginResponse.Nombre),
+                new Claim(ClaimTypes.Email, loginResponse.Correo),
+                new Claim(ClaimTypes.Role, loginResponse.RolPrincipal),
+    //new Claim(ClaimTypes.NameIdentifier,"2577"), TokensJWT
+    //new Claim(JwtRegisteredClaimNames.UniqueName,"Rik"),
+            };
+
+            string token = authService.GenerateToken(claims);
+           
+    //await Auth.SetTokenAsync(token, DateTime.Now.AddSeconds(30).ToString());
+    //var data = await Auth.GetAuthenticationStateAsync();
+    //Console.WriteLine(data.User.Identity);
+    //Console.WriteLine(data.User.Claims.ToList().Count);
+    //StateHasChanged();
         }
-    } }
+    }
+}*@

@@ -23,7 +23,8 @@ namespace PruCinema.Server.Controllers
             this.configuration = configuration;
         }
 
-        [HttpGet("login")]
+        //[HttpGet("login")]
+        [HttpGet("{user}/{pass}")]
         public IActionResult Login(string user, string pass)
         {
             string tokenstring = GenerateToken(user, pass);
@@ -39,16 +40,22 @@ namespace PruCinema.Server.Controllers
             {
                 claims = new[]
                 {
-                    new Claim("Email","usuario@usuario.com"),
+                    new Claim(ClaimTypes.Email,"usuario@usuario.com"),
                     //new Claim(JwtRegisteredClaimNames.UniqueName,"JABC"),
-                    new Claim("User","usuario"),
+                    new Claim(ClaimTypes.Name,"usuario"),
                     new Claim(ClaimTypes.Role,"Administrador")
                 };
 
                 IdentityModelEventSource.ShowPII = true;
                 var keybuffer = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["AuthSettings:key"]));
                 DateTime expireTime = DateTime.Now.AddSeconds(30);
-                var token = new JwtSecurityToken(issuer: configuration["AuthSettings:Issuer"], audience: configuration["AuthSettings:Audince"], claims, expires: expireTime, signingCredentials: new SigningCredentials(keybuffer, SecurityAlgorithms.HmacSha256));
+                var token = new JwtSecurityToken(
+                    issuer: configuration["AuthSettings:Issuer"], 
+                    audience: configuration["AuthSettings:Audince"], 
+                    claims: claims, 
+                    expires: expireTime, 
+                    signingCredentials: new SigningCredentials(keybuffer, SecurityAlgorithms.HmacSha256)
+                );
 
                 tokenAsString = new JwtSecurityTokenHandler().WriteToken(token);
             }
